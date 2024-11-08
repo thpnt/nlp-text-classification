@@ -1,0 +1,11 @@
+pandas
+numpy
+tensorflow-macos
+matplotlib
+scipy
+nltk
+sckit-learn
+jupyter
+textblob
+memory-profiler
+logging
