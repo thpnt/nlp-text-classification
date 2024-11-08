@@ -1,0 +1,1 @@
+from setup.utils_setup import slang_dict
