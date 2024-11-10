@@ -4,7 +4,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import necessary libraries
-import sys, re, time, logging
+import sys, re, time, logging, csv
 import pandas as pd
 import nltk
 from nltk.stem import WordNetLemmatizer
@@ -170,8 +170,7 @@ if __name__ == "__main__":
     
     # Reduce data size for testing
     df_balanced = pd.concat([df[df.label == 0].sample(n=30000), df[df.label != 0]])
-    df = df_balanced.sample(frac=1).sample(frac=0.1)
-    df = df.sample(frac=0.02)
+    df = df_balanced.sample(frac=1).sample(frac=0.02)
     
     # Clean and Tokenize the data and log the running time
     tokenizer = TokenizerMP(batch_size=64)
@@ -185,6 +184,13 @@ if __name__ == "__main__":
     datetime = time.strftime("%Y%m%d-%H%M%S")
     cleaned_data.to_csv(os.path.join(data_dir, f'processed/{datetime}__training_set.csv'), index=False)
     
+    # Add logs to CSV file
+    with open(os.path.join(project_root, 'logs', 'preprocessing', 'log_clean_tokenize.csv'), mode='a', newline='') as file:
+        fieldnames = ["datetime", "num_rows", "runtime", "num_processors"]  
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writerow({'datetime': datetime, 'num_rows' :int(cleaned_data.shape[0]), 
+               'runtime' : run_time, 'num_processors' : int(cpu_count()-2)})
+
 
 
     
