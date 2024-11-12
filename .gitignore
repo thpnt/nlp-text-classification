@@ -162,3 +162,7 @@ cython_debug/
 #.idea/
 
 datasets/
+setup/
+myenv/
+logs/
+Dockerfile

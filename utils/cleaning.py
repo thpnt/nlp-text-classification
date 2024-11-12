@@ -227,3 +227,59 @@ slang_dict = {
     'yoosuck': 'you suck',
     'yousuk': 'you suck'
 }
+
+
+# Time and date regexes
+TIME = r"([0-9]{1,2}:[0-9]{2}( (am|AM|pm|PM))?)"
+DAY = r"([23]?(1(st)?|2(nd)?|3(rd)?|[4-9](th)?)|1[0-9](th)?)"
+MONTH = r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Nov|Dec)"
+YEAR = r"('?[0-9]{2}|[0-9]{4})"
+DATE = rf"(({DAY} {MONTH}|{MONTH} {DAY})(,? {YEAR})?)"
+TIMESTAMP = rf"((({TIME},? (\(UTC\) )?)?{DATE}|({DATE},? )?{TIME})(\s+\(UTC\))?)"
+
+# The 'talk' part at the end of a signature
+TALK = r"((\|\s*|\(\s*)?[tT]alk((\s*[-|•, ]\s*|\s+)[cC]ontribs)?(\s*[-|)])?)"
+
+# IP addresses
+IP = r"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})"
+
+# Username and the username part of a the signature
+USERNAME = r"([^#<>[\]|{}/@\s]+)"
+USER_SIG = rf"((((?:\s)[-–—]\s*)?(\((User:)?{USERNAME}\)|User:{USERNAME})|(?:\s)[-–—]\s*{USERNAME})(\s+{TALK})?)"
+
+# A full signature
+SIGNATURE = rf"(((([-–—]\s*)?{IP}(\s+{USER_SIG})?|(?:\s)[-–—]\s*[uU]nsigned|{TALK}|{USER_SIG})(\s+{TIMESTAMP})?)|{TIMESTAMP}(\s+{TALK})?)"
+
+# List of the patterns to remove
+REGEX_REMOVE = [
+    r"^(\"+|'+)",  # Initial quotation marks
+    r"(\"+|'+)$",  # Final quotation marks
+    r"^REDIRECT.*$",  # The whole comment is a redirect
+    rf"^\s*{SIGNATURE}",  # Initial signature
+    rf"{SIGNATURE}\s*$",  # Final signature
+    r" \[[0-9]+\]|\[[0-9]+\] ",  # Citations
+    r"‖\s+[tT]alk - [-a-zA-Z0-9._()\s]+‖",
+    r"==[^=]+==",
+    r"^::+",
+    r"^\s*\(UTC\)",
+    rf"Unblock {IP}",
+    r"2nd Unblock Request",
+    r":Category:",
+    r"File:[^\s]+",
+    r"\{\|.+\|\}",  # Embedded code
+    # r"\{\{.+\s.+\}\}", # Embedded code
+    r"^\s+",  # Initial whitespace
+    r"\s+$",  # Trailing whitespace
+]
+
+# List of patterns to replaces
+REGEX_REPLACE = {
+    "\n+": "\n",
+    "\\'": "'",
+    '""+': '"',
+    "''+": "'",
+    # r"(WP|Wikipedia):[^\s]+": "URL", # Wikipedia internal links
+    r"[^\s]+#[^\s]+": "URL",  # Wikipedia internal links
+    r"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)": "URL",  # ULRs
+    r"([uU]ser_[tT]alk|[tT]alk):[^\s]+": "URL",  # Talk links
+}
