@@ -166,3 +166,4 @@ setup/
 myenv/
 logs/
 Dockerfile
+.env
