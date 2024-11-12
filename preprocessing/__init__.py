@@ -1,1 +1,1 @@
-from setup.utils_setup import slang_dict
+from utils.cleaning import slang_dict

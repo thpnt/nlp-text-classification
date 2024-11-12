@@ -6,7 +6,7 @@ import re
 import pandas as pd
 from textblob import TextBlob
 from nltk.tokenize import word_tokenize
-from setup.utils_setup import slang_dict
+from utils.cleaning import slang_dict
 from nltk.stem import WordNetLemmatizer
 import nltk
 from nltk.corpus import stopwords, words, wordnet

@@ -12,26 +12,24 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords, wordnet, words
 from textblob import TextBlob
 from multiprocessing import Pool, cpu_count
-from tqdm import tqdm
-tqdm.pandas()
+#from tqdm import tqdm
+#tqdm.pandas()
 
 # Import custom functions & artifacts
-from setup.utils_setup import slang_dict
+from utils.cleaning import slang_dict, REGEX_REMOVE, REGEX_REPLACE
+
+from utils.logging_setup import logging_setup
+# Logging configuration
+run_logger, error_logger = logging_setup()
 
 # NLTK resources
 nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
 nltk.download('words', quiet=True)
+nltk.download('punkt_tab', quiet=True)
 stop_words = stopwords.words('english')
 combined_corpus = set(words.words()) | set(wordnet.words())
 combined_corpus = {word.lower() for word in combined_corpus}
-
-
-
-
-# Configure logging
-logging.basicConfig(filename="text_processing_errors.log", level=logging.ERROR,
-                    format="%(asctime)s - %(message)s")
 
 # Helper function for multiprocessing with error handling
 def process_batch(batch, stop_words, slang_dict):
@@ -55,7 +53,13 @@ def process_batch(batch, stop_words, slang_dict):
             Returns:
                 str: The cleaned text.
             """
-            # Apply text cleaning steps
+            # Apply REGEX_REMOVE and REGEX_REPLACE
+            for pattern in REGEX_REMOVE:
+                text = re.sub(pattern, "", text)
+            for pattern, repl in REGEX_REPLACE.items():
+                text = re.sub(pattern, repl, text)
+            
+            # Apply additionnal text cleaning steps
             text = re.sub(r'^RT @\w+: ', '', text)
             text = re.sub(r'http\S+', ' ', text)
             text = re.sub(r'\b\w*jpeg\w*\b|\b\w*jpg\w*\b', '', text)
@@ -118,7 +122,7 @@ def process_batch(batch, stop_words, slang_dict):
         return batch
 
     except Exception as e:
-        logging.error(f"Error processing batch with index {batch.index[0]}-{batch.index[-1]}: {e}")
+        error_logger.error(f"Error processing batch with index {batch.index[0]}-{batch.index[-1]}: {e}")
         return batch  # Return the batch unmodified if there's an error
 
 class TokenizerMP:
@@ -158,38 +162,6 @@ class TokenizerMP:
 
         # Combine processed batches back into a single DataFrame
         return pd.concat(processed_batches, ignore_index=True)
-
-
-# Script to test the function
-if __name__ == "__main__":
-    # Load the data
-    project_root = os.path.dirname(os.path.dirname(__file__))
-    data_dir = os.path.join(project_root, 'datasets')
-    data_file = os.path.join(data_dir, 'raw/merged_dataset.csv')
-    df = pd.read_csv(data_file)
-    
-    # Reduce data size for testing
-    df_balanced = pd.concat([df[df.label == 0].sample(n=30000), df[df.label != 0]])
-    df = df_balanced.sample(frac=1).sample(frac=0.02)
-    
-    # Clean and Tokenize the data and log the running time
-    tokenizer = TokenizerMP(batch_size=64)
-    start_time = time.time()
-    cleaned_data = tokenizer.clean(df)
-    run_time = time.time() - start_time
-    logging.info(f"Processing complete. Time taken: {run_time:.2f} seconds.")
-    
-    
-    # Save the cleaned data and logfile
-    datetime = time.strftime("%Y%m%d-%H%M%S")
-    cleaned_data.to_csv(os.path.join(data_dir, f'processed/{datetime}__training_set.csv'), index=False)
-    
-    # Add logs to CSV file
-    with open(os.path.join(project_root, 'logs', 'preprocessing', 'log_clean_tokenize.csv'), mode='a', newline='') as file:
-        fieldnames = ["datetime", "num_rows", "runtime", "num_processors"]  
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writerow({'datetime': datetime, 'num_rows' :int(cleaned_data.shape[0]), 
-               'runtime' : run_time, 'num_processors' : int(cpu_count()-2)})
 
 
 
