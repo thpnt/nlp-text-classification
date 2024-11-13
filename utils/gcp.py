@@ -52,30 +52,28 @@ def upload_data_to_gcs(bucket_name: str, file_name: str, data :str, storage_clie
     return None
 
 
-def append_row_to_csv(bucket_name: str, file_name: str, data: str, storage_client=None) -> None:
-    # Instantiate the Cloud Storage client
+def append_row_to_csv(bucket_name: str, file_path :str, row_data, storage_client=None):
+    # Initialize the storage client
     if not storage_client:
         storage_client = storage.Client.from_service_account_json(service_account)
-    
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_path)
+
+    # Download the existing CSV file
     try:
-        # Get the bucket
-        bucket = storage_client.bucket(bucket_name)
-
-        # Get the blob (file)
-        blob = bucket.blob(file_name)
-
-        # Download the file into memory
-        file_data = blob.download_as_text()
-        
-        # Append the new data to the existing data
-        new_data = pd.read_csv(io.StringIO(data))
-        existing_data = pd.read_csv(io.StringIO(file_data))
-        combined_data = pd.concat([existing_data, new_data], ignore_index=True)
-        
-        # Upload the combined data back to the bucket
-        blob.upload_from_string(combined_data.to_csv(index=False), content_type='text/csv')
+        existing_data = load_data_from_gcs(bucket_name, file_path, storage_client)
     except Exception as e:
-        logging.error(f"Error appending data to CSV file in GCS: {e}")
+        # If the file does not exist, create a new DataFrame
+        df = pd.DataFrame(columns=["datetime", "num_rows", "run_time", "num_processors"])
+
+    # Convert the row data to a DataFrame
+    new_row = pd.DataFrame([row_data.split(", ")], columns=["datetime", "num_rows", "run_time", "num_processors"])
+
+    # Append the new row to the existing DataFrame
+    df = pd.concat([existing_data, new_row], ignore_index=True)
+
+    # Save the updated DataFrame back to the CSV file
+    upload_data_to_gcs(bucket_name, file_path, df, storage_client)
     
     return None
 
