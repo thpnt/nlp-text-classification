@@ -130,3 +130,26 @@ class Tokenizer:
         data_copy = data.copy()
         data_copy[text_series] = data_copy[text_series].apply(word_tokenize, preserve_line=True).apply(lemma_text).apply(replace_unknown_tokens)
         return data_copy
+    
+    
+    
+    # Load the data
+    #project_root = os.path.dirname(os.path.dirname(__file__))
+    #data_dir = os.path.join(project_root, 'datasets')
+    #data_file = os.path.join(data_dir, 'raw/merged_dataset.csv')
+    #df = pd.read_csv(data_file)
+    
+    #cleaned_data.to_csv(os.path.join(data_dir, f'processed/{datetime}__training_set.csv'), index=False)
+    #run_logger.info(f"Cleaned data saved to {data_dir}/processed/{datetime}__training_set.csv")
+    
+    
+    
+       #try:
+    #    with open(os.path.join(project_root, 'logs', 'preprocessing', 'log_clean_tokenize.csv'), mode='a', newline='') as file:
+    #        fieldnames = ["datetime", "num_rows", "runtime", "num_processors"]  
+    #        writer = csv.DictWriter(file, fieldnames=fieldnames)
+    #        writer.writerow({'datetime': datetime, 'num_rows' :int(cleaned_data.shape[0]), 
+    #               'runtime' : run_time, 'num_processors' : int(cpu_count()-2)})
+    #        run_logger.info("Log added to log_clean_tokenize.csv")
+    #except Exception as e:
+    #    error_logger.error(f"Error writing logs to CSV file: {e}")
