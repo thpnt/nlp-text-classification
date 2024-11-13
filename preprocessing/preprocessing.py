@@ -12,8 +12,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords, wordnet, words
 from textblob import TextBlob
 from multiprocessing import Pool, cpu_count
-#from tqdm import tqdm
-#tqdm.pandas()
+from tqdm import tqdm
+tqdm.pandas()
 
 # Import custom functions & artifacts
 from utils.cleaning import slang_dict, REGEX_REMOVE, REGEX_REPLACE
