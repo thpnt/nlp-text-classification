@@ -16,7 +16,7 @@ from tqdm import tqdm
 tqdm.pandas()
 
 # Import custom functions & artifacts
-from utils.cleaning import slang_dict, REGEX_REMOVE, REGEX_REPLACE
+from utils.cleaning_items import slang_dict, REGEX_REMOVE, REGEX_REPLACE
 
 from utils.logging_setup import logging_setup
 # Logging configuration

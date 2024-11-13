@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west4-docker.pkg.dev/arewetoxic-441517/testarewetoxic/data-cleaning-image'
+      - '.'
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west4-docker.pkg.dev/arewetoxic-441517/testarewetoxic/data-cleaning-image'
+images:
+  - 'europe-west4-docker.pkg.dev/arewetoxic-441517/testarewetoxic/data-cleaning-image'
