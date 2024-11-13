@@ -17,10 +17,10 @@ RUN pip install --no-cache-dir google-cloud-storage google-cloud
 
 # Copy the requirements file into the container
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the source code into the container
 COPY . .
 
 # Run the cleaning script
-CMD ["python", "tests/cleaning.py"]
+CMD ["python", "src/dataset_cleaning.py"]
