@@ -13,6 +13,7 @@ from nltk.corpus import stopwords, wordnet, words
 from textblob import TextBlob
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+import gc
 tqdm.pandas()
 
 # Import custom functions & artifacts
@@ -115,10 +116,24 @@ def process_batch(batch, stop_words, slang_dict):
             return [token if token in combined_corpus else '<UNK>' for token in tokens]
         
         
+        def combined_cleaning(text: str) -> list:
+            """
+            Combines all the cleaning steps into a single function.
+            Args:
+                text (str): The input text to be cleaned.
+            Returns:
+                list: A list of cleaned tokens.
+            """
+            text = clean_text(text)
+            text = correct_text(text, stop_words, slang_dict)
+            tokens = word_tokenize(text, preserve_line=True)
+            tokens = lemma_text(tokens)
+            tokens = replace_unknown_tokens(tokens)
+            return tokens
+        
+        
         # Process each text in the batch
-        batch['text'] = batch['text'].apply(clean_text)
-        batch['text'] = batch['text'].apply(lambda x: correct_text(x, stop_words, slang_dict))
-        batch['tokens'] = batch['text'].apply(word_tokenize, preserve_line=True).apply(lemma_text).apply(replace_unknown_tokens)
+        batch['tokens'] = batch['text'].apply(combined_cleaning)
         return batch
 
     except Exception as e:
@@ -151,7 +166,7 @@ class TokenizerMP:
         args = [(batch.copy(), self.stop_words, slang_dict) for batch in batches]
         
         # Use multiprocessing to process batches in parallel
-        num_processors = cpu_count() - 2
+        num_processors = cpu_count() - 1
         processed_batches = []
         
         # Process batches in parallel
@@ -159,9 +174,18 @@ class TokenizerMP:
             chunk = args[i:i + num_processors]
             with Pool(processes=num_processors) as pool:
                 processed_batches.extend(pool.starmap(process_batch, chunk))
+                
+            # Cleanup the chunk to free memory
+            del chunk
+            gc.collect()
+            
+        final_df = pd.concat(processed_batches, ignore_index=True)
+        # Cleanup 
+        del processed_batches
+        gc.collect()
 
         # Combine processed batches back into a single DataFrame
-        return pd.concat(processed_batches, ignore_index=True)
+        return final_df
 
 
 

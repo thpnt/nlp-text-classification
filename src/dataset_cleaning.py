@@ -26,13 +26,8 @@ client = storage.Client.from_service_account_json(service_account)
 if __name__ == "__main__": 
     # Load the data from GCS
     bucket_name = os.getenv("GCP_BUCKET_NAME")
-    file_name = "data/dataset_full.csv"
+    file_name = "data/raw/training.csv"
     df = load_data_from_gcs(bucket_name, file_name, client)
-    
-    
-    # Reduce data size for testing --- TO BE REMOVED WHEN RUNNING ON FULL DATASET
-    df_balanced = pd.concat([df[df.label == 0].sample(n=30000), df[df.label != 0]])
-    df = df_balanced.sample(frac=1).sample(frac=0.005)
     run_logger.info(f"Data loaded. Number of rows: {df.shape[0]}")
     
     # Clean and Tokenize the data and log the running time
