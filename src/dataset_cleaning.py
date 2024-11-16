@@ -31,7 +31,7 @@ if __name__ == "__main__":
     run_logger.info(f"Data loaded. Number of rows: {df.shape[0]}")
     
     # Clean and Tokenize the data and log the running time
-    tokenizer = TokenizerMP(batch_size=64)
+    tokenizer = TokenizerMP(batch_size=512)
     start_time = time.time()
     cleaned_data = tokenizer.clean(df)
     run_time = time.time() - start_time
