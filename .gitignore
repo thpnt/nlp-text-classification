@@ -167,3 +167,4 @@ myenv/
 logs/
 Dockerfile
 .env
+.dockerignore
