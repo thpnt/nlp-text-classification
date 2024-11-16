@@ -13,6 +13,7 @@ from nltk.corpus import stopwords, wordnet, words
 from textblob import TextBlob
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+import ast
 import gc
 tqdm.pandas()
 
