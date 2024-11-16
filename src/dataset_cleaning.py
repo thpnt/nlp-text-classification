@@ -28,10 +28,11 @@ if __name__ == "__main__":
     bucket_name = os.getenv("GCP_BUCKET_NAME")
     file_name = "data/raw/training.csv"
     df = load_data_from_gcs(bucket_name, file_name, client)
+    df = df.sample(600)
     run_logger.info(f"Data loaded. Number of rows: {df.shape[0]}")
     
     # Clean and Tokenize the data and log the running time
-    tokenizer = TokenizerMP(batch_size=64)
+    tokenizer = TokenizerMP(batch_size=32)
     start_time = time.time()
     cleaned_data = tokenizer.clean(df)
     run_time = time.time() - start_time

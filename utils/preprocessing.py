@@ -168,12 +168,18 @@ class TokenizerMP:
         # Use multiprocessing to process batches in parallel
         num_processors = cpu_count() - 1
         processed_batches = []
+        total_rows = data.shape[0]
+        processed_rows = 0
         
         # Process batches in parallel
         for i in range(0, len(args), num_processors):
             chunk = args[i:i + num_processors]
             with Pool(processes=num_processors) as pool:
                 processed_batches.extend(pool.starmap(process_batch, chunk))
+                processed_rows += self.batch_size * num_processors
+                
+                # Log progress
+                run_logger.info(f"Processed {processed_rows}/{total_rows} rows")
                 
             # Cleanup the chunk to free memory
             del chunk
