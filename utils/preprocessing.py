@@ -9,12 +9,13 @@ import pandas as pd
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords, wordnet, words
+from nltk.corpus import stopwords, wordnet, words, webtext, gutenberg, brown
 from textblob import TextBlob
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 import ast
 import gc
+import signal
 tqdm.pandas()
 
 # Import custom functions & artifacts
@@ -29,8 +30,11 @@ nltk.download('stopwords', quiet=True)
 nltk.download('wordnet', quiet=True)
 nltk.download('words', quiet=True)
 nltk.download('punkt_tab', quiet=True)
+nltk.download('webtext', quiet=True)
+nltk.download('gutenberg', quiet=True)
+nltk.download('brown', quiet=True)
 stop_words = stopwords.words('english')
-combined_corpus = set(words.words()) | set(wordnet.words())
+combined_corpus = set(words.words()) | set(wordnet.words()) | set(webtext.words()) | set(gutenberg.words()) | set(brown.words())
 combined_corpus = {word.lower() for word in combined_corpus}
 
 # Helper function for multiprocessing with error handling
@@ -75,6 +79,12 @@ def process_batch(batch, stop_words, slang_dict):
             text = re.sub(r'[\x80-\xFF]', '', text)
             return text
 
+        def handler(signum, frame):
+            raise TimeoutError("Process took too long")
+        
+        # Set the signal handler for the alarm
+        signal.signal(signal.SIGALRM, handler)
+        
         def correct_text(text: str, stop_words, slang_dict: dict) -> str:
             """
             Corrects the given text by replacing slang words, removing stop words, and performing spelling correction.
@@ -90,8 +100,16 @@ def process_batch(batch, stop_words, slang_dict):
             tokens = text.split()
             tokens = [slang_dict.get(word, word) for word in tokens]
             tokens = [word for word in tokens if word not in stop_words]
+            #tokens = [word for word in tokens if len(word) < 15]
             text = ' '.join(tokens)
-            corrected_text = str(TextBlob(text).correct())
+            try:
+                # set an alarm for 3 secondes
+                signal.alarm(3)
+                corrected_text = str(TextBlob(text).correct())
+                # disable the alarm
+                signal.alarm(0)
+            except TimeoutError:
+                corrected_text = text
             return corrected_text
         
         
@@ -104,7 +122,11 @@ def process_batch(batch, stop_words, slang_dict):
                 list: A list of lemmatized tokens.
             """
             lemmatizer = WordNetLemmatizer()
-            return [lemmatizer.lemmatize(token, 'v') for token in tokens]
+            
+            ls = [lemmatizer.lemmatize(token, 'v') for token in tokens]
+            ls = [lemmatizer.lemmatize(token, 'n') for token in ls]
+            ls = [lemmatizer.lemmatize(token, 'a') for token in ls]
+            return ls
         
         def replace_unknown_tokens(tokens: list) -> list:
             """
@@ -126,15 +148,24 @@ def process_batch(batch, stop_words, slang_dict):
                 list: A list of cleaned tokens.
             """
             text = clean_text(text)
-            text = correct_text(text, stop_words, slang_dict)
+            corrected_text = correct_text(text, stop_words, slang_dict)
+            return corrected_text
+        
+        def tokenize(text: str) -> list:
+            """
+            Tokenizes the input text using the NLTK word_tokenize function.
+            Args:
+                text (str): The input text to be tokenized.
+            Returns:
+                list: A list of tokens (words) in the input text."""
             tokens = word_tokenize(text, preserve_line=True)
             tokens = lemma_text(tokens)
             tokens = replace_unknown_tokens(tokens)
             return tokens
         
-        
         # Process each text in the batch
-        batch['tokens'] = batch['text'].apply(combined_cleaning)
+        batch['corrected_text'] = batch['text'].apply(combined_cleaning)
+        batch['tokens'] = batch['corrected_text'].apply(tokenize)
         return batch
 
     except Exception as e:
