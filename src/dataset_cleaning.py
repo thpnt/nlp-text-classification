@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # Append logs to GCS
     try:
         append_row_to_csv(bucket_name, "logs/log_clean_tokenize.csv", 
-                      f"{datetime}, {cleaned_data.shape[0]}, {run_time}, {cpu_count()-2}", client)
+                      f"{datetime}, {cleaned_data.shape[0]}, {run_time}, {cpu_count()-1}", client)
         run_logger.info("Log added to log_clean_tokenize.csv")
     except Exception as e:
         error_logger.error(f"Error writing logs to CSV file: {e}")
