@@ -5,3 +5,4 @@ textblob
 gcloud
 google-cloud-storage
 python-dotenv
+tensorflow-macos
