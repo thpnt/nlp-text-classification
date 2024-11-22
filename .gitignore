@@ -163,7 +163,7 @@ cython_debug/
 
 datasets/
 setup/
-myenv/
+env/
 logs/
 Dockerfile
 .env
