@@ -168,3 +168,4 @@ logs/
 Dockerfile
 .env
 .dockerignore
+saved_models/
