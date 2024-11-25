@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/theopinto--dalle/code/arewetoxic/mlruns/115714125129639023/6113a1fbf4244151b0d94ee60d8e285e/artifacts
+end_time: 1732560109064
+entry_point_name: ''
+experiment_id: '115714125129639023'
+lifecycle_stage: active
+run_id: 6113a1fbf4244151b0d94ee60d8e285e
+run_name: baseline_model
+run_uuid: 6113a1fbf4244151b0d94ee60d8e285e
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1732560102281
+status: 3
+tags: []
+user_id: theopinto--dalle
