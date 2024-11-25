@@ -162,11 +162,13 @@ cython_debug/
 #.idea/
 
 datasets/
-gcp_service_account.json
+arewetoxic-441517-738dba878761.json
 env/
 logs/
 Dockerfile
 cloudbuild.yaml
 .env
 .dockerignore
-saved_models/
+models/
+mlruns/
+notebooks/
