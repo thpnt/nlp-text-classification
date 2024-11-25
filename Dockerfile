@@ -23,4 +23,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the cleaning script
-CMD ["python", "utils/dataset_cleaning.py"]
+CMD ["python", "dataset_cleaning.py"]

@@ -162,10 +162,11 @@ cython_debug/
 #.idea/
 
 datasets/
-setup/
+gcp_service_account.json
 env/
 logs/
 Dockerfile
+cloudbuild.yaml
 .env
 .dockerignore
 saved_models/
