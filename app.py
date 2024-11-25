@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from utils.input_pipeline import clean_data, feature_ready
 from utils.custom_metrics import WeightedCategoricalCrossEntropy, PrecisionMulticlass, RecallMulticlass
 
@@ -39,10 +40,19 @@ max_length = 170
 
 
 # Streamlit app header
-st.title("Is this toxic ?")
+st.markdown("# 🌟 Welcome to the Toxicity Detector!")
 
 # Get user input text
-user_input = st.text_area("Is this toxic ?", "Type your text here")
+user_input = st.text_area("Enter your text for toxicity analysis", placeholder="e.g., 'I dislike your attitude.'")
+
+
+with st.expander("What is this about ?"):
+    st.write("Project description.")
+    
+with st.expander("How does it work ?"):
+    st.write("How the app works.")
+
+
 
 # Predict
 if st.button("Predict"):
@@ -52,8 +62,17 @@ if st.button("Predict"):
     data = feature_ready(data, embedding_matrix, vocab, token_to_index, max_length)
     
     # Predict
-    probas = model.predict(data)
-    prediction = tf.argmax(probas, axis=1).numpy()
+    with st.spinner("Analyzing..."):
+        probas = model.predict(data)
+        prediction = tf.argmax(probas, axis=1).numpy()
+    
+    
+    # Prediction probabilities
+    labels = ["Not Toxic", "Toxic", "Very Toxic"]
+    fig, ax = plt.subplots()
+    ax.bar(labels, probas[0])
+    ax.set_title("Prediction Confidence")
+    st.pyplot(fig)
     
     
     # Display prediction
@@ -63,6 +82,16 @@ if st.button("Predict"):
         st.write("This is toxic. 'Heshima si utumwa.'")
     else:
         st.write("This is very toxic and insulting. If you cannot respect, you cannot love.")
+
+feedback = st.radio("Was this prediction accurate?", ["Yes", "No"])
+if feedback == "Yes":
+    st.write("Thank you for your feedback!")
+else:
+    st.write("I'll work on improving the model accuracy!")
+
+st.markdown("---")   
+with st.expander("Hear more from me on my github"):
+    st.markdown("[Visit my github](https://www.github.com/thpnt)")
     
 
 
