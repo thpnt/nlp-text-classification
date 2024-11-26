@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+seaborn
+tensorflow == 2.14.0
+streamlit
+nltk
+textblob
+gcloud
+google-cloud-storage
+python-dotenv

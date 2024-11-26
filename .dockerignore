@@ -4,8 +4,6 @@ LICENSE
 README.md
 tests/
 mlruns/
-saved_models/
-src/
 env/
 __pycache__/
 utils/__pycache__/
