@@ -76,7 +76,7 @@ user_input = tab1.text_area(
 )
 
 # Prediction logic
-if tab1.button("Predict"):
+if tab1.button("Is this toxic ?"):
     # Prepare input data
     data = pd.DataFrame({"text": [user_input]})
     data = clean_data(data)
