@@ -6,14 +6,17 @@ import numpy as np
 import tensorflow as tf
 import seaborn as sns
 import matplotlib.pyplot as plt
+from functools import partial
 
 # Custom utility functions
-from utils.input_pipeline import clean_data, feature_ready
+from utils.input_pipeline import clean_data, build_predict_dataset
 from utils.text import text1, text2
 from utils.custom_metrics import (
     WeightedCategoricalCrossEntropy, 
     PrecisionMulticlass, 
-    RecallMulticlass
+    RecallMulticlass,
+    F1ScoreMulticlass,
+    weights
 )
 
 # Add project root to sys path
@@ -21,28 +24,27 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 project_root = os.path.dirname(__file__)
 
 # Cache loaded data to avoid reloading on each interaction
-@st.cache_data
-def load_embedding_matrix():
-    return np.load(os.path.join(project_root, 'models', 'embedding_matrix_300.npy'))
+#@st.cache_data
+#def load_embedding_matrix():
+#    return np.load(os.path.join(project_root, 'models', 'embedding_matrix_300.npy'))
 
-@st.cache_data
-def load_vocab():
-    return list(np.load(os.path.join(project_root, 'models', 'vocab.npy'), allow_pickle=True))
+#@st.cache_data
+#def load_vocab():
+#    return list(np.load(os.path.join(project_root, 'models', 'vocab.npy'), allow_pickle=True))
 
-@st.cache_data
-def load_token_to_index():
-    return np.load(os.path.join(project_root, 'models', 'token_to_index.npy'), allow_pickle=True).item()
+#@st.cache_data
+#def load_token_to_index():
+#    return np.load(os.path.join(project_root, 'models', 'token_to_index.npy'), allow_pickle=True).item()
 
 @st.cache_resource
 def load_model():
     return tf.keras.models.load_model(
-        os.path.join(project_root, 'models', 'baseline_model'),
-        custom_objects={
-            "WeightedCategoricalCrossEntropy": WeightedCategoricalCrossEntropy,
-            "PrecisionMulticlass": PrecisionMulticlass,
-            "RecallMulticlass": RecallMulticlass
-        }
-    )
+    os.path.join(project_root, "models", "bi_gru"),
+    custom_objects={'PrecisionMulticlass': PrecisionMulticlass,
+                    'RecallMulticlass': RecallMulticlass,
+                    'F1ScoreMulticlass': F1ScoreMulticlass,
+                    'WeightedCategoricalCrossEntropy': partial(WeightedCategoricalCrossEntropy, weights=weights)}
+)
 
 # Initialize state variables if not present
 if 'prediction' not in st.session_state:
@@ -50,14 +52,14 @@ if 'prediction' not in st.session_state:
 if 'probas' not in st.session_state:
     st.session_state['probas'] = None
 if 'labels' not in st.session_state:
-    st.session_state['labels'] = ["Not Toxic", "Toxic", "Very Toxic"]
+    st.session_state['labels'] = ["Not Toxic", "Toxic"]
 
 # Load model and necessary data
-embedding_matrix = load_embedding_matrix()
-vocab = load_vocab()
-token_to_index = load_token_to_index()
+#embedding_matrix = load_embedding_matrix()
+#vocab = load_vocab()
+#token_to_index = load_token_to_index()
 model = load_model()
-max_length = 170
+#max_length = 170
 prediction = None
 
 # Main app layout with tabs
@@ -80,7 +82,8 @@ if tab1.button("Is this toxic ?"):
     # Prepare input data
     data = pd.DataFrame({"text": [user_input]})
     data = clean_data(data)
-    data = feature_ready(data, embedding_matrix, vocab, token_to_index, max_length)
+    data = build_predict_dataset(data).batch(1)
+    #data = feature_ready(data, embedding_matrix, vocab, token_to_index, max_length)
 
     # Predict and store in session state
     with st.spinner("Analyzing..."):
@@ -99,8 +102,8 @@ if st.session_state['prediction'] is not None:
         tab1.write("This is not toxic at all.")
     elif prediction == 1:
         tab1.write("This is toxic. 'Heshima si utumwa.'")
-    else:
-        tab1.write("This is very toxic and insulting. If you cannot respect, you cannot love.")
+    #else:
+    #    tab1.write("This is very toxic and insulting. If you cannot respect, you cannot love.")
 
     # Feedback section
     feedback = tab1.radio("Was this prediction accurate?", ["Yes", "No"])
@@ -113,7 +116,7 @@ if st.session_state['prediction'] is not None:
 # -------------- Details Tab --------------
 if st.session_state['probas'] is not None:
     # Plot prediction probabilities
-    labels = ["Not Toxic", "Toxic", "Very Toxic"]
+    labels = ["Not Toxic", "Toxic"]
     fig, ax = plt.subplots(figsize=(7, 3))
     sns.set_theme(style="whitegrid")
     sns.set_color_codes("pastel")
