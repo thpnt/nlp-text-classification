@@ -20,7 +20,7 @@ class WeightedCategoricalCrossEntropy(tf.keras.losses.Loss):
     def get_config(self):
         config = super().get_config()
         config.update({
-            "n_class": self.n_class,
+            "weights": self.weights,
         })
         return config
 
