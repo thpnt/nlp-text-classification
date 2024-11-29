@@ -3,9 +3,9 @@ import tensorflow as tf
 
 
 # Define custom loss
-weights = pd.Series([0.104978, 0.328745,0.566277])
+weights = pd.Series([0.334298, 0.665702])
 class WeightedCategoricalCrossEntropy(tf.keras.losses.Loss):
-    def __init__(self, weights=weights, name='weighted_categorical_crossentropy', **kwargs):
+    def __init__(self, weights, name='weighted_categorical_crossentropy', **kwargs):
         super(WeightedCategoricalCrossEntropy, self).__init__()
         self.weights = tf.cast(weights, tf.float32)
         
@@ -17,10 +17,25 @@ class WeightedCategoricalCrossEntropy(tf.keras.losses.Loss):
         weighted_losses = -self.weights * y_true * tf.math.log(y_pred)
         return tf.reduce_mean(tf.reduce_sum(weighted_losses, axis=1))
     
-    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "n_class": self.n_class,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+
+
+
+
+
 # Define custom metrics
 class PrecisionMulticlass(tf.keras.metrics.Metric):
-    def __init__(self, name='precision', n_class=3, **kwargs):
+    def __init__(self, name='precision', n_class=2, **kwargs):
         super(PrecisionMulticlass, self).__init__(name=name, **kwargs)
         self.precision = self.add_weight(
             shape=(n_class,),
@@ -50,11 +65,21 @@ class PrecisionMulticlass(tf.keras.metrics.Metric):
     def reset_state(self):
         self.true_positives.assign(tf.zeros(self.n_class))
         self.false_positives.assign(tf.zeros(self.n_class))
-        
+    
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "n_class": self.n_class,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
         
 
 class RecallMulticlass(tf.keras.metrics.Metric):
-    def __init__(self, name='recall', n_class=3, **kwargs):
+    def __init__(self, name='recall', n_class=2, **kwargs):
         super(RecallMulticlass, self).__init__(name=name, **kwargs)
         self.recall = self.add_weight(
             shape=(n_class,),
@@ -83,4 +108,51 @@ class RecallMulticlass(tf.keras.metrics.Metric):
     def reset_state(self):
         self.true_positives.assign(tf.zeros(self.n_class))
         self.false_negatives.assign(tf.zeros(self.n_class))
+        
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "n_class": self.n_class,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+        
+        
+        
+class F1ScoreMulticlass(tf.keras.metrics.Metric):
+    def __init__(self, name='f1_score', n_class=2, **kwargs):
+        super(F1ScoreMulticlass, self).__init__(name=name, **kwargs)
+        self.n_class = n_class
+        self.precision = PrecisionMulticlass(n_class=n_class)
+        self.recall = RecallMulticlass(n_class=n_class)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        self.precision.update_state(y_true, y_pred, sample_weight)
+        self.recall.update_state(y_true, y_pred, sample_weight)
+
+    def result(self):
+        precision = self.precision.result()
+        recall = self.recall.result()
+        f1_score = 2 * (precision * recall) / (precision + recall + tf.keras.backend.epsilon())
+        return f1_score
+
+    def reset_state(self):
+        self.precision.reset_state()
+        self.recall.reset_state()
+        
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "n_class": self.n_class,
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+        
+        
             
