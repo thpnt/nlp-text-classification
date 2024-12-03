@@ -8,10 +8,9 @@ from textblob import TextBlob
 import signal
 import pandas as pd
 import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords, wordnet, words, webtext, gutenberg, brown
 from utils.artifacts import slang_dict
+from transformers import TFBertModel
 
 import tensorflow as tf
 #from tensorflow.keras.utils import pad_sequences
@@ -67,14 +66,6 @@ def clean_data(batch, stop_words = stop_words, slang_dict=slang_dict):
             return corrected_text
         
         
-        #def lemma_text(tokens: list) -> list:
-        #    lemmatizer = WordNetLemmatizer()
-        #    
-        #    ls = [lemmatizer.lemmatize(token, 'v') for token in tokens]
-        #    ls = [lemmatizer.lemmatize(token, 'n') for token in ls]
-        #    ls = [lemmatizer.lemmatize(token, 'a') for token in ls]
-        #    return ls
-        
         def replace_unknown_tokens(tokens: list) -> list:
             return [token if token in combined_corpus else '<UNK>' for token in tokens]
         
@@ -84,19 +75,12 @@ def clean_data(batch, stop_words = stop_words, slang_dict=slang_dict):
             corrected_text = correct_text(text, stop_words, slang_dict)
             return corrected_text
         
-        #def tokenize(text: str) -> list:
-        #    tokens = word_tokenize(text, preserve_line=True)
-        #    tokens = lemma_text(tokens)
-        #    tokens = replace_unknown_tokens(tokens)
-        #    return tokens
-        
         # Process each text in the batch
         batch['corrected_text'] = batch['text'].apply(combined_cleaning)
-        #batch['tokens'] = batch['corrected_text'].apply(tokenize)
         return batch
     
     
-def build_predict_dataset(data: pd.DataFrame, batch_size:int = 512):
+def build_gru_dataset(data: pd.DataFrame, batch_size:int = 512):
     # Prepare dataset
     X = data["corrected_text"]
 
@@ -104,6 +88,65 @@ def build_predict_dataset(data: pd.DataFrame, batch_size:int = 512):
     dataset = tf.data.Dataset.from_tensor_slices((X))
 
     return dataset
+
+
+def build_bert_model(loss: list, metrics: list, name:str = "bert_model"):
+    # Load the pre-trained BERT model
+    bert_model = TFBertModel.from_pretrained('bert-base-uncased')
+
+    # Freeze the BERT model layers
+    for layer in bert_model.layers:  # Freeze all layers
+        layer.trainable = False
+
+    # Define the input layers
+    input_ids = tf.keras.layers.Input(shape=(128,), dtype=tf.int32, name="input_ids")
+    attention_mask = tf.keras.layers.Input(shape=(128,), dtype=tf.int32, name="attention_mask")
+
+    # Get the output from the BERT model
+    bert_outputs = bert_model(input_ids, attention_mask=attention_mask)
+
+    # Use the pooled output for classification
+    pooled_output = bert_outputs.pooler_output
+
+    # Add custom layers
+    x = tf.keras.layers.Dense(128, activation='relu')(pooled_output)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    x = tf.keras.layers.Dense(64, activation='relu')(x)
+    output = tf.keras.layers.Dense(2, activation='softmax')(x)
+
+    # Create the model
+    model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=output, name=name)
+
+    # Compile the model
+    model.compile(optimizer=tf.keras.optimizers.legacy.Adam(),
+                  loss=loss,
+                  metrics=metrics)
+
+    # Summary of the model
+    model.summary()
+    
+    return model
+
+def build_bert_dataset(data: pd.DataFrame, tokenizer, max_length=128, batch_size=512):
+    # Prepare dataset
+    texts = data["text"].tolist()
+
+    # Tokenize and encode the data
+    encoded_data = tokenizer(
+        texts,
+        padding="max_length",
+        truncation=True,
+        max_length=max_length,
+        return_tensors="tf"
+    )
+
+    # Create tf.data.Dataset with tokenized inputs
+    dataset = tf.data.Dataset.from_tensor_slices((
+        dict(encoded_data)
+    ))
+
+    # Batch the dataset
+    return dataset.batch(batch_size)
     
     
 # Import data

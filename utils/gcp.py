@@ -78,3 +78,28 @@ def append_row_to_csv(bucket_name: str, file_path :str, row_data, storage_client
     return None
 
 
+def add_feedback_to_csv(bucket_name: str, file_path :str, row_data: list, storage_client=None):
+    # Initialize the storage client
+    if not storage_client:
+        storage_client = storage.Client.from_service_account_json(service_account)
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_path)
+
+    # Download the existing CSV file
+    try:
+        existing_data = load_data_from_gcs(bucket_name, file_path, storage_client)
+    except Exception as e:
+        # If the file does not exist, create a new DataFrame
+        existing_data = pd.DataFrame(columns=["datetime", "input", "probas", "feedback"])
+
+    # Convert the row data to a DataFrame
+    new_row = pd.DataFrame([row_data], columns=["datetime", "input", "probas", "feedback"])
+
+    # Append the new row to the existing DataFrame
+    df = pd.concat([existing_data, new_row], ignore_index=True)
+
+    # Save the updated DataFrame back to the CSV file
+    upload_data_to_gcs(bucket_name, file_path, df, storage_client)
+    
+    return
+
