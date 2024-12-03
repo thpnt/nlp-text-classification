@@ -69,7 +69,7 @@ tab1, tab2, tab3 = st.tabs(["Home", "About", "Details"])
 
 
 # -------------- Home Tab --------------
-tab1.markdown("# Website title!")
+tab1.markdown("# Is this text toxic ?")
 
 # User input text area
 user_input = tab1.text_area(
