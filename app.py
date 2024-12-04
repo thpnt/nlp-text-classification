@@ -8,6 +8,9 @@ import seaborn as sns
 import time
 import matplotlib.pyplot as plt
 from functools import partial
+from dotenv import load_dotenv
+from transformers import BertTokenizer
+load_dotenv(override=True)
 
 # Add project root to sys path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -18,6 +21,7 @@ from google.cloud import translate_v2 as translate
 from google.cloud import storage
 from utils.gcp import add_feedback_to_csv
 service_account = os.getenv("GCP_SERVICE_ACCOUNT")
+service_account = os.path.join(project_root, service_account)
 bucket_name = os.getenv("GCP_BUCKET_NAME")
 file_path = "logs/evaluation_feedback.csv"
 storage_client = storage.Client.from_service_account_json(service_account)
@@ -49,7 +53,6 @@ def load_gru_model():
 
 @st.cache_resource
 def load_bert_tokenizer():
-    from transformers import BertTokenizer
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     return tokenizer
     
@@ -57,9 +60,9 @@ def load_bert_tokenizer():
 def load_bert_model():
     loss = WeightedCategoricalCrossEntropy(weights)
     metrics = [PrecisionMulticlass(name='precision'), RecallMulticlass(name='recall'), F1ScoreMulticlass(name='f1')]
-    model = build_bert_model(loss, metrics)
-    model.load_weights(os.path.join(project_root, "models", "bert", "bert_model_test"))
-    return model
+    bert_model = build_bert_model(loss, metrics)
+    bert_model.load_weights(os.path.join(project_root, "models", "bert", "bert_model_test"))
+    return bert_model
 
 # Main app layout with tabs
 tab1, tab2, tab3 = st.tabs(["Home", "About", "Details"])
@@ -142,10 +145,12 @@ if tab1.button("Get the result"):
         input = build_bert_dataset(input, tokenizer)
         
         # Predict and store in session state
-        probas = bert_model.predict(input)
-        prediction = tf.argmax(probas, axis=1).numpy()
-        st.session_state['prediction'] = prediction
-        st.session_state['probas'] = probas[0]
+        # Predict and store in session state
+        with st.spinner("Analyzing..."):
+            probas = bert_model.predict(input)
+            prediction = tf.argmax(probas, axis=1).numpy()
+            st.session_state['prediction'] = prediction
+            st.session_state['probas'] = probas[0]
 
 # Display prediction if available
 if st.session_state['prediction'] is not None:
@@ -154,19 +159,9 @@ if st.session_state['prediction'] is not None:
     
     # Show prediction results
     if prediction == 0:
-        outputs = [
-            "This text appears to be non-toxic. Keep up the positive communication!",
-            "The content seems respectful and considerate. Well done!",
-            "This message is classified as non-toxic. Maintain this tone!"
-        ]
-        tab1.write(np.random.choice(outputs))
+        tab1.write("This text appears to be non-toxic. Keep up the positive communication!")
     elif prediction == 1:
-        outputs = [
-            "This text might be toxic.",    
-            "This can be considered toxic.",
-            "The message is classfied as toxic."
-        ]
-        tab1.write(np.random.choice(outputs))
+        tab1.write("The message is classfied as toxic.")
         
     
 

@@ -8,6 +8,7 @@ COPY requirements_app.txt .
 RUN pip install --no-cache-dir -r requirements_app.txt
 
 # Copy the source code into the container
+COPY .env .env
 COPY . .
 
 # Expose the port that Streamlit will run on
