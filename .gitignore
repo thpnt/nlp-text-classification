@@ -162,7 +162,7 @@ cython_debug/
 #.idea/
 
 datasets/
-arewetoxic-441517-738dba878761.json
+service_account.json
 env/
 logs/
 Dockerfile
