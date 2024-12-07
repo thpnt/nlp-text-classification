@@ -171,4 +171,6 @@ cloudbuild.yaml
 .dockerignore
 models/
 mlruns/
-notebooks/
+requirements_app.txt
+requirements_data.txt
+utils/text.py

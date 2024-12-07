@@ -1,36 +1,35 @@
-import sys
-import os
+import sys, os, time
 import streamlit as st
 import pandas as pd
 import numpy as np
-import tensorflow as tf
-import seaborn as sns
-import time
 import matplotlib.pyplot as plt
-from functools import partial
-from dotenv import load_dotenv
+import seaborn as sns
+import tensorflow as tf
 from transformers import BertTokenizer
+from functools import partial   # Used to load tf.model with weigths parameter
+from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # Add project root to sys path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-project_root = os.path.dirname(__file__)
+project_root = os.path.dirname(os.path.dirname(__file__))
 
-# Cloud settings
+# Google Cloud
 from google.cloud import translate_v2 as translate
 from google.cloud import storage
-from utils.gcp import add_feedback_to_csv
-service_account = os.getenv("GCP_SERVICE_ACCOUNT")
-service_account = os.path.join(project_root, service_account)
+from utils.gcp import load_feedback_to_gcp
+
 bucket_name = os.getenv("GCP_BUCKET_NAME")
-file_path = "logs/evaluation_feedback.csv"
+logs_path = os.getenv("GCP_LOGS_PATH")
+service_account = os.path.join(project_root, os.getenv("GCP_SERVICE_ACCOUNT"))
+
 storage_client = storage.Client.from_service_account_json(service_account)
 translate_client = translate.Client.from_service_account_json(service_account)
 
-
 # Custom utility functions
-from utils.utils import clean_data, build_gru_dataset, build_bert_dataset, build_bert_model
 from utils.text import text1, text2
+from utils.utils import (clean_data, build_gru_dataset, build_bert_dataset, 
+                         build_bert_model)
 from utils.custom_metrics import (
     WeightedCategoricalCrossEntropy, 
     PrecisionMulticlass, 
@@ -38,6 +37,8 @@ from utils.custom_metrics import (
     F1ScoreMulticlass,
     weights
 )
+
+
 
 # -------------- Load resources into cache --------------
 
@@ -48,7 +49,8 @@ def load_gru_model():
     custom_objects={'PrecisionMulticlass': PrecisionMulticlass,
                     'RecallMulticlass': RecallMulticlass,
                     'F1ScoreMulticlass': F1ScoreMulticlass,
-                    'WeightedCategoricalCrossEntropy': partial(WeightedCategoricalCrossEntropy, weights=weights)}
+                    'WeightedCategoricalCrossEntropy': partial(WeightedCategoricalCrossEntropy, 
+                                                               weights=weights)}
 )
 
 @st.cache_resource
@@ -59,17 +61,22 @@ def load_bert_tokenizer():
 @st.cache_resource
 def load_bert_model():
     loss = WeightedCategoricalCrossEntropy(weights)
-    metrics = [PrecisionMulticlass(name='precision'), RecallMulticlass(name='recall'), F1ScoreMulticlass(name='f1')]
+    metrics = [PrecisionMulticlass(name='precision'),
+               RecallMulticlass(name='recall'),
+               F1ScoreMulticlass(name='f1')]
     bert_model = build_bert_model(loss, metrics)
     bert_model.load_weights(os.path.join(project_root, "models", "bert", "bert_model_test"))
     return bert_model
 
-# Main app layout with tabs
+
+
+
+# APP LAYOUT
 tab1, tab2, tab3 = st.tabs(["Home", "About", "Details"])
 
 
-# -------------- Session state variables --------------
-# Initialize state variables if not present
+# -------------- Session state --------------
+
 if 'prediction' not in st.session_state:
     st.session_state['prediction'] = None
 if 'probas' not in st.session_state:
@@ -100,7 +107,6 @@ user_input = tab1.text_area(
     placeholder="e.g., 'I dislike your attitude.'"
 )
         
-        
 
 # Model selection
 model = tab1.selectbox("Select the model to use", ["BERT", "GRU"])
@@ -124,15 +130,14 @@ if tab1.button("Get the result"):
     st.session_state["user_input"] = user_input
     
     
-    input = pd.DataFrame({"text": [user_input]})
+    input = pd.DataFrame({"text": [user_input]}) # Useful for prediction purpose
     input = clean_data(input)
     
     
-    # GRU Model logic
+    # Model Prediction
     if model == "GRU":
         input = build_gru_dataset(input).batch(1)
 
-        # Predict and store in session state
         with st.spinner("Analyzing..."):
             probas = gru_model.predict(input)
             prediction = tf.argmax(probas, axis=1).numpy()
@@ -140,12 +145,9 @@ if tab1.button("Get the result"):
             st.session_state['probas'] = probas[0]
 
 
-    # BERT Model logic
     elif model == "BERT":
         input = build_bert_dataset(input, tokenizer)
         
-        # Predict and store in session state
-        # Predict and store in session state
         with st.spinner("Analyzing..."):
             probas = bert_model.predict(input)
             prediction = tf.argmax(probas, axis=1).numpy()
@@ -154,36 +156,44 @@ if tab1.button("Get the result"):
 
 # Display prediction if available
 if st.session_state['prediction'] is not None:
+    
     prediction = st.session_state['prediction']
     probas = st.session_state['probas']
     
-    # Show prediction results
     if prediction == 0:
         tab1.write("This text appears to be non-toxic. Keep up the positive communication!")
+    
     elif prediction == 1:
         tab1.write("The message is classfied as toxic.")
         
-    
 
     # Feedback section
     feedback = tab1.radio("Was this prediction accurate?", ["Yes", "No"])
+    
     if tab1.button("Submit feedback"):
+        
         if feedback == "Yes":
             st.session_state["feedback"] = 1
             tab1.write("Thank you for your feedback!")
+            
         elif feedback == "No":
             st.session_state["feedback"] = 0
             tab1.write("I'll work on improving the model accuracy!")
             
         # Save feedback to GCS
-        row = [pd.Timestamp.now(), st.session_state["user_input"], st.session_state["probas"], st.session_state["feedback"]]
-        add_feedback_to_csv(bucket_name, file_path, row, storage_client)
+        row = [pd.Timestamp.now(), 
+               st.session_state["user_input"], 
+               st.session_state["probas"], 
+               st.session_state["feedback"]]
+        
+        load_feedback_to_gcp(bucket_name, logs_path, row, storage_client)
 
 
     
 # -------------- Details Tab --------------
+# Plot prediction confidence (probabilities | softmax output)
 if st.session_state['probas'] is not None:
-    # Plot prediction probabilities
+
     labels = ["Not Toxic", "Toxic"]
     
     fig, ax = plt.subplots(figsize=(7, 3))
