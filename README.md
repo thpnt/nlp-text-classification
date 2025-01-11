@@ -5,4 +5,6 @@ I explored classic NLP networks (RNN, GRU-based, LTSM-based) as well as the Tran
 I developped a multi-thread text processing pipeline.
 I deployed the models in a streamlit app for fun interaction.
 
-Run docker build to try it out.
+# NO PUBLIC USE POSSIBLE FOR NOW
+The models are not saved in the repository for now.
+Do not try to deploy the docker app.
