@@ -1,12 +1,10 @@
-import sys, os, time
+import sys, os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import requests
 import seaborn as sns
-import tensorflow as tf
-from transformers import BertTokenizer
-from functools import partial   # Used to load tf.model with weigths parameter
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
@@ -26,50 +24,6 @@ service_account = os.path.join(project_root, os.getenv("GCP_SERVICE_ACCOUNT"))
 storage_client = storage.Client.from_service_account_json(service_account)
 translate_client = translate.Client.from_service_account_json(service_account)
 
-# Custom utility functions
-from utils.text import text1, text2
-from utils.utils import (clean_data, build_gru_dataset, build_bert_dataset, 
-                         build_bert_model)
-from utils.custom_metrics import (
-    WeightedCategoricalCrossEntropy, 
-    PrecisionMulticlass, 
-    RecallMulticlass,
-    F1ScoreMulticlass,
-    weights
-)
-
-
-
-# -------------- Load resources into cache --------------
-
-@st.cache_resource
-def load_gru_model():
-    return tf.keras.models.load_model(
-    os.path.join(project_root, "models", "bi_gru"),
-    custom_objects={'PrecisionMulticlass': PrecisionMulticlass,
-                    'RecallMulticlass': RecallMulticlass,
-                    'F1ScoreMulticlass': F1ScoreMulticlass,
-                    'WeightedCategoricalCrossEntropy': partial(WeightedCategoricalCrossEntropy, 
-                                                               weights=weights)}
-)
-
-@st.cache_resource
-def load_bert_tokenizer():
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    return tokenizer
-    
-@st.cache_resource
-def load_bert_model():
-    loss = WeightedCategoricalCrossEntropy(weights)
-    metrics = [PrecisionMulticlass(name='precision'),
-               RecallMulticlass(name='recall'),
-               F1ScoreMulticlass(name='f1')]
-    bert_model = build_bert_model(loss, metrics)
-    bert_model.load_weights(os.path.join(project_root, "models", "bert", "bert_model_test"))
-    return bert_model
-
-
-
 
 # APP LAYOUT
 tab1, tab2, tab3 = st.tabs(["Home", "About", "Details"])
@@ -87,11 +41,6 @@ if "feedback" not in st.session_state:
     st.session_state["feedback"] = None
 if "user_input" not in st.session_state:
     st.session_state["user_input"] = None
-
-# Load model and necessary data
-gru_model = load_gru_model()
-tokenizer = load_bert_tokenizer()
-bert_model = load_bert_model()
 prediction = None
 
 
@@ -106,14 +55,9 @@ user_input = tab1.text_area(
     "Enter your text and get feedback", 
     placeholder="e.g., 'I dislike your attitude.'"
 )
-        
-
-# Model selection
-model = tab1.selectbox("Select the model to use", ["BERT", "GRU"])
 
 # Prediction logic
 if tab1.button("Get the result"):
-    
     
     # Detect language and translate if needed
     if user_input:
@@ -125,34 +69,24 @@ if tab1.button("Get the result"):
                 tab1.write(f"Translated from {lang['language']} to English: {translation['translatedText']}")
         except:
             tab1.write("Error translating text. Please enter English text.")
-    
-    
+
     st.session_state["user_input"] = user_input
-    
-    
-    input = pd.DataFrame({"text": [user_input]}) # Useful for prediction purpose
-    input = clean_data(input)
-    
-    
-    # Model Prediction
-    if model == "GRU":
-        input = build_gru_dataset(input).batch(1)
-
-        with st.spinner("Analyzing..."):
-            probas = gru_model.predict(input)
-            prediction = tf.argmax(probas, axis=1).numpy()
-            st.session_state['prediction'] = prediction
-            st.session_state['probas'] = probas[0]
 
 
-    elif model == "BERT":
-        input = build_bert_dataset(input, tokenizer)
+    # Make prediction
+    with st.spinner("Analyzing..."):
+        try:
+            response = requests.post("http://localhost:8000/predictbert", json={"text": user_input})
+            
+            if response.status_code == 200:
+                st.session_state['prediction'] = response.json()["prediction"]
+                st.session_state['probas'] = response.json()["probas"]
+                
+            else:
+                st.error(f"Error processing the request. Status code: {response.status_code}")
+        except Exception as e:
+            st.error("Error processing the request. Please try again. Error : {e}")
         
-        with st.spinner("Analyzing..."):
-            probas = bert_model.predict(input)
-            prediction = tf.argmax(probas, axis=1).numpy()
-            st.session_state['prediction'] = prediction
-            st.session_state['probas'] = probas[0]
 
 # Display prediction if available
 if st.session_state['prediction'] is not None:
@@ -214,11 +148,11 @@ if st.session_state['probas'] is not None:
 # -------------- About Tab --------------
 tab2.markdown("---")
 tab2.markdown("## What is this about?")
-tab2.write(f"{text1}")
+#tab2.write(f"{text1}")
 
 tab2.markdown("---")
 tab2.markdown("## How does it work?")
-tab2.markdown(f"{text2}")
+#tab2.markdown(f"{text2}")
 
 tab2.markdown("---")
 tab2.markdown("### Check out more projects on my GitHub")
