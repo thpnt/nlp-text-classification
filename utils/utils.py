@@ -115,6 +115,8 @@ def build_bert_model(loss: list, metrics: list, name:str = "bert_model"):
     x = tf.keras.layers.Dense(128, activation='relu')(pooled_output)
     x = tf.keras.layers.Dropout(0.2)(x)
     x = tf.keras.layers.Dense(64, activation='relu')(x)
+    x = tf.keras.layers.Dropout(0.2)(x)
+    x = tf.keras.layers.Dense(32, activation='relu')(x)
     output = tf.keras.layers.Dense(2, activation='softmax')(x)
 
 
