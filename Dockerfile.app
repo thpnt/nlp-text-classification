@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /arewetoxic
 
-COPY requirements_app.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY .env .env
