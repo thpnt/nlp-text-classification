@@ -7,7 +7,7 @@ A machine learning pipeline for detecting toxic content in text. This project in
 
 To launch the Streamlit app locally, run the following command:
 ```bash
-uvicorn api:app --reload --port 8000
+uvicorn scripts.api:app --reload --port 8000
 streamlit run scripts/app.py
 ```
 ⚠️ Make sure the trained model files (e.g., bert.h5) are saved in the correct path under models/.
