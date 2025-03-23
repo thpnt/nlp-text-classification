@@ -71,7 +71,7 @@ if tab1.button("Get the result"):
             if "Quota Exceeded" in str(e):
                 tab1.warning("Error translating text. Quota Exceeded for Google Translation API. Please enter English text.")
             else:
-                tab1.write(f"Error translating text. Please Enter English text for correct classfication.")
+                tab1.warning(f"Translation module not available. Please make sure to enter english text.")
 
     st.session_state["user_input"] = user_input
 
