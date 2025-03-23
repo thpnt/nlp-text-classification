@@ -68,7 +68,7 @@ if tab1.button("Get the result"):
                 user_input = translation["translatedText"]
                 tab1.write(f"Translated from {lang['language']} to English: {translation['translatedText']}")
         except Exception as e:
-            if "Quota Exceeded" in str(e):
+            if "403" in str(e):
                 tab1.warning("Error translating text. Quota Exceeded for Google Translation API. Please enter English text.")
             else:
                 tab1.warning(f"Translation module not available. Please make sure to enter english text.")
