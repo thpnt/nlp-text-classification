@@ -66,7 +66,11 @@ pip install -r requirements.txt
 
 ✅ .env manages access to GCP service accounts and paths
 
-## 📬 Contact
+# Exemple
+![Home Screenshot](assets/streamlit_hometab.png)
+![Result Screenshot](assets/streamlit_predictiontab.png)
+
+# 📬 Contact
 Feel free to reach out or explore more projects:
 github.com/thpnt
 
